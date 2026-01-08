@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Climb Tracker</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Overpass+Mono:wght@600&display=swap');
+
+      :root {
+        --bg-primary: #0a0e1a;
+        --bg-secondary: #141925;
+        --bg-elevated: #1a2030;
+        --accent-primary: #00e676;
+        --accent-secondary: #00c853;
+        --text-primary: #e8edf4;
+        --text-secondary: #8b93a8;
+        --border: #252d40;
+        --success: #4ade80;
+        --flash: #e5a83d;
+        --warmup: #60a5fa;
+        --fail: #f87171;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        padding: 0;
+        overflow-x: hidden;
+      }
+
+      /* Animated background gradient */
+      body::before {
+        content: '';
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+            circle at 20% 50%,
+            rgba(217, 120, 69, 0.03) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(199, 115, 64, 0.03) 0%,
+            transparent 50%
+          );
+        animation: gradientShift 15s ease infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      @keyframes gradientShift {
+        0%,
+        100% {
+          transform: translate(0, 0) rotate(0deg);
+        }
+        50% {
+          transform: translate(-5%, -5%) rotate(5deg);
+        }
+      }
+
+      .container {
+        position: relative;
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 20px;
+        z-index: 1;
+      }
+
+      header {
+        text-align: center;
+        padding: 40px 0 30px;
+        position: relative;
+      }
+
+      h1 {
+        font-family: 'Overpass Mono', monospace;
+        font-size: 32px;
+        font-weight: 600;
+        letter-spacing: -1px;
+        background: linear-gradient(
+          135deg,
+          var(--accent-primary),
+          var(--accent-secondary)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 8px;
+      }
+
+      .subtitle {
+        font-size: 14px;
+        color: var(--text-secondary);
+        font-weight: 400;
+      }
+
+      /* Buttons */
+      button {
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 12px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(
+          135deg,
+          var(--accent-primary),
+          var(--accent-secondary)
+        );
+        color: white;
+        padding: 16px 32px;
+        font-size: 16px;
+        width: 100%;
+        font-weight: 600;
+        box-shadow: 0 4px 20px rgba(217, 120, 69, 0.2);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(217, 120, 69, 0.25);
+      }
+
+      .btn-secondary {
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        padding: 14px 24px;
+        font-size: 15px;
+        border: 1px solid var(--border);
+      }
+
+      .btn-secondary:hover {
+        background: var(--bg-secondary);
+        border-color: var(--accent-primary);
+      }
+
+      .btn-small {
+        padding: 8px 16px;
+        font-size: 13px;
+      }
+
+      /* Cards */
+      .card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Modal */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(10, 14, 26, 0.95);
+        backdrop-filter: blur(10px);
+        z-index: 1000;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-content {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 30px;
+        max-width: 90%;
+        width: 450px;
+        max-height: 90vh;
+        overflow-y: auto;
+        animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+      }
+
+      .modal-title {
+        font-size: 22px;
+        font-weight: 700;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 28px;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+      }
+
+      .close-btn:hover {
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+      }
+
+      /* Form elements */
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+
+      select,
+      input[type='text'],
+      textarea {
+        width: 100%;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 16px;
+        color: var(--text-primary);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 15px;
+        transition: all 0.2s;
+      }
+
+      select:focus,
+      input[type='text']:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 3px rgba(217, 120, 69, 0.08);
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      /* Button groups */
+      .button-group {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      .button-group.three {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .button-group.four {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .toggle-btn {
+        padding: 12px 16px;
+        background: var(--bg-elevated);
+        border: 2px solid var(--border);
+        color: var(--text-primary);
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .toggle-btn:hover {
+        border-color: var(--accent-primary);
+      }
+
+      .toggle-btn.active {
+        background: linear-gradient(
+          135deg,
+          var(--accent-primary),
+          var(--accent-secondary)
+        );
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 12px rgba(217, 120, 69, 0.2);
+      }
+
+      /* Star rating */
+      .star-rating {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+
+      .star {
+        font-size: 32px;
+        cursor: pointer;
+        color: var(--border);
+        transition: all 0.2s;
+      }
+
+      .star.active {
+        color: var(--accent-secondary);
+        text-shadow: 0 0 8px rgba(199, 115, 64, 0.3);
+      }
+
+      .star:hover {
+        transform: scale(1.1);
+      }
+
+      /* Tags */
+      .tag-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tag-btn {
+        padding: 8px 14px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+
+      .tag-btn:hover {
+        border-color: var(--accent-primary);
+        color: var(--text-primary);
+      }
+
+      .tag-btn.active {
+        background: rgba(217, 120, 69, 0.12);
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+      }
+
+      /* Session info */
+      .session-info {
+        background: var(--bg-elevated);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+        border: 1px solid var(--border);
+      }
+
+      .session-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .session-type {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--accent-primary);
+      }
+
+      .session-gym {
+        font-size: 14px;
+        color: var(--text-secondary);
+      }
+
+      /* Climb list */
+      .climb-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .climb-item {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px;
+        transition: all 0.2s;
+      }
+
+      .climb-item:hover {
+        border-color: var(--accent-primary);
+        transform: translateX(4px);
+      }
+
+      .climb-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+
+      .climb-grade {
+        font-size: 18px;
+        font-weight: 700;
+        font-family: 'Overpass Mono', monospace;
+      }
+
+      .climb-difficulty {
+        font-size: 16px;
+      }
+
+      .climb-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+
+      .climb-badge {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .badge-send {
+        background: rgba(74, 222, 128, 0.15);
+        color: var(--success);
+      }
+      .badge-flash {
+        background: rgba(251, 191, 36, 0.15);
+        color: var(--flash);
+      }
+      .badge-warmup {
+        background: rgba(96, 165, 250, 0.15);
+        color: var(--warmup);
+      }
+      .badge-fail {
+        background: rgba(248, 113, 113, 0.15);
+        color: var(--fail);
+      }
+
+      .climb-note {
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--text-secondary);
+        font-style: italic;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary);
+      }
+
+      .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+      }
+
+      /* Stats */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .stat-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        font-family: 'Overpass Mono', monospace;
+        color: var(--accent-primary);
+        margin-bottom: 4px;
+      }
+
+      .stat-label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .modal-actions button {
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>CLIMB TRACKER</h1>
+        <div class="subtitle">Track progress. Send harder.</div>
+      </header>
+
+      <!-- Landing view -->
+      <div id="landingView">
+        <div class="card">
+          <button class="btn-primary" onclick="showSessionSetup()">
+            Start Session
+          </button>
+        </div>
+
+        <div class="stats hidden" id="statsView">
+          <div class="stat-card">
+            <div class="stat-value" id="totalClimbs">0</div>
+            <div class="stat-label">Total Climbs</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="totalSessions">0</div>
+            <div class="stat-label">Sessions</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="sendRate">0%</div>
+            <div class="stat-label">Send Rate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active session view -->
+      <div id="sessionView" class="hidden">
+        <div class="session-info">
+          <div class="session-header">
+            <div>
+              <div class="session-type" id="sessionType"></div>
+              <div class="session-gym" id="sessionGym"></div>
+              <div class="session-gym" id="sessionDuration">0:00</div>
+            </div>
+            <button class="btn-secondary btn-small" onclick="endSession()">
+              End Session
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <button class="btn-primary" onclick="showLogClimb()">
+            + Log Climb
+          </button>
+        </div>
+
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-value" id="sessionClimbs">0</div>
+            <div class="stat-label">Climbs</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="sessionSends">0</div>
+            <div class="stat-label">Sends</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="sessionHighGrade">-</div>
+            <div class="stat-label">High Point</div>
+          </div>
+        </div>
+
+        <div class="climb-list" id="climbList">
+          <div class="empty-state">
+            <div class="empty-state-icon">🧗</div>
+            <p>Log your first climb to get started</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Setup Modal -->
+    <div id="sessionSetupModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Start Session</h2>
+          <button class="close-btn" onclick="closeModal('sessionSetupModal')">
+            &times;
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>Gym</label>
+          <select id="gymSelect">
+            <option value="Durham">TRC - Durham</option>
+            <option value="Salvage">TRC - Salvage Yard</option>
+            <option value="Morrisville">TRC - Morrisville</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Session Type</label>
+          <div class="button-group">
+            <button
+              class="toggle-btn active"
+              onclick="selectSessionType('boulder')"
+            >
+              Boulder
+            </button>
+            <button class="toggle-btn" onclick="selectSessionType('rope')">
+              Rope
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            class="btn-secondary"
+            onclick="closeModal('sessionSetupModal')"
+          >
+            Cancel
+          </button>
+          <button class="btn-primary" onclick="startSession()">Start</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log Climb Modal -->
+    <div id="logClimbModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Log Climb</h2>
+          <button class="close-btn" onclick="closeModal('logClimbModal')">
+            &times;
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>Grade</label>
+          <select id="gradeSelect">
+            <!-- Will be populated based on session type -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Outcome</label>
+          <div class="button-group four">
+            <button class="toggle-btn" onclick="selectOutcome('warmup')">
+              Warmup
+            </button>
+            <button class="toggle-btn" onclick="selectOutcome('flash')">
+              Flash
+            </button>
+            <button class="toggle-btn" onclick="selectOutcome('send')">
+              Send
+            </button>
+            <button class="toggle-btn" onclick="selectOutcome('fail')">
+              Fail
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group" id="styleGroup">
+          <label>Style</label>
+          <div class="button-group" id="styleButtons">
+            <!-- Will be populated based on session type -->
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Difficulty</label>
+          <div class="star-rating" id="difficultyRating">
+            <span class="star" onclick="setDifficulty(1)">☆</span>
+            <span class="star" onclick="setDifficulty(2)">☆</span>
+            <span class="star" onclick="setDifficulty(3)">☆</span>
+            <span class="star" onclick="setDifficulty(4)">☆</span>
+            <span class="star" onclick="setDifficulty(5)">☆</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Tags (Optional)</label>
+          <div class="tag-group" id="tagGroup">
+            <button class="tag-btn" onclick="toggleTag(this)">Crimpy</button>
+            <button class="tag-btn" onclick="toggleTag(this)">Powerful</button>
+            <button class="tag-btn" onclick="toggleTag(this)">Technical</button>
+            <button class="tag-btn" onclick="toggleTag(this)">Slopey</button>
+            <button class="tag-btn" onclick="toggleTag(this)">Overhang</button>
+            <button class="tag-btn" onclick="toggleTag(this)">Slab</button>
+            <button class="tag-btn" onclick="toggleTag(this)">Endurance</button>
+            <button class="tag-btn" onclick="toggleTag(this)">Dynamic</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Notes (Optional)</label>
+          <textarea
+            id="climbNotes"
+            placeholder="Any thoughts on the climb..."
+          ></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal('logClimbModal')">
+            Cancel
+          </button>
+          <button class="btn-primary" onclick="saveClimb()">Save Climb</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+      // ============================================
+      // FIREBASE CONFIG - PASTE YOUR CONFIG HERE
+      // ============================================
+      const firebaseConfig = {
+        apiKey: 'AIzaSyAE4Iwuhu7UvldmAuiluLWYLI8r6U04B8I',
+        authDomain: 'climbing-tracker-d6c2a.firebaseapp.com',
+        projectId: 'climbing-tracker-d6c2a',
+        storageBucket: 'climbing-tracker-d6c2a.firebasestorage.app',
+        messagingSenderId: '287353383248',
+        appId: '1:287353383248:web:a9c5c9ab98e8569f706455',
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const db = firebase.firestore();
+
+      // State
+      let currentUser = null;
+      let currentSession = null;
+      let selectedSessionType = 'boulder';
+      let selectedOutcome = null;
+      let selectedStyle = null;
+      let selectedDifficulty = 3;
+      let sessionTimerInterval = null;
+
+      // Auth
+      auth.signInAnonymously().then((userCredential) => {
+        currentUser = userCredential.user;
+        loadStats();
+      });
+
+      // Grade options
+      const boulderGrades = [
+        'V0',
+        'V1',
+        'V2',
+        'V3',
+        'V4',
+        'V5',
+        'V6',
+        'V7',
+        'V8',
+        'V9',
+        'V10',
+      ];
+      const ropeGrades = [
+        '5.5',
+        '5.6',
+        '5.7',
+        '5.8',
+        '5.8+',
+        '5.9-',
+        '5.9',
+        '5.9+',
+        '5.10-',
+        '5.10',
+        '5.10+',
+        '5.11-',
+        '5.11',
+        '5.11+',
+        '5.12-',
+        '5.12',
+        '5.12+',
+      ];
+
+      // Modal functions
+      function showSessionSetup() {
+        document.getElementById('sessionSetupModal').classList.add('active');
+      }
+
+      function showLogClimb() {
+        // Populate grade options
+        const gradeSelect = document.getElementById('gradeSelect');
+        const grades =
+          currentSession.type === 'boulder' ? boulderGrades : ropeGrades;
+        gradeSelect.innerHTML = grades
+          .map((g) => `<option value="${g}">${g}</option>`)
+          .join('');
+
+        // Populate style buttons
+        const styleButtons = document.getElementById('styleButtons');
+        if (currentSession.type === 'boulder') {
+          styleButtons.innerHTML = `
+                    <button class="toggle-btn active" onclick="selectStyle('wall')">Wall</button>
+                    <button class="toggle-btn" onclick="selectStyle('board')">Board</button>
+                `;
+          selectedStyle = 'wall';
+        } else {
+          styleButtons.innerHTML = `
+                    <button class="toggle-btn active" onclick="selectStyle('lead')">Lead</button>
+                    <button class="toggle-btn" onclick="selectStyle('toprope')">Top Rope</button>
+                `;
+          selectedStyle = 'lead';
+        }
+
+        // Reset form
+        selectedOutcome = null;
+        selectedDifficulty = 3;
+        document.querySelectorAll('.toggle-btn').forEach((btn) => {
+          if (
+            !btn.textContent.includes('Wall') &&
+            !btn.textContent.includes('Lead')
+          ) {
+            btn.classList.remove('active');
+          }
+        });
+        updateDifficultyStars();
+        document.getElementById('climbNotes').value = '';
+        document
+          .querySelectorAll('.tag-btn')
+          .forEach((btn) => btn.classList.remove('active'));
+
+        document.getElementById('logClimbModal').classList.add('active');
+      }
+
+      function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+      }
+
+      function selectSessionType(type) {
+        selectedSessionType = type;
+        document
+          .querySelectorAll('#sessionSetupModal .toggle-btn')
+          .forEach((btn) => {
+            btn.classList.remove('active');
+          });
+        event.target.classList.add('active');
+      }
+
+      function selectOutcome(outcome) {
+        selectedOutcome = outcome;
+        document
+          .querySelectorAll('#logClimbModal .button-group.four .toggle-btn')
+          .forEach((btn) => {
+            btn.classList.remove('active');
+          });
+        event.target.classList.add('active');
+      }
+
+      function selectStyle(style) {
+        selectedStyle = style;
+        document
+          .querySelectorAll('#styleButtons .toggle-btn')
+          .forEach((btn) => {
+            btn.classList.remove('active');
+          });
+        event.target.classList.add('active');
+      }
+
+      function setDifficulty(rating) {
+        selectedDifficulty = rating;
+        updateDifficultyStars();
+      }
+
+      function updateDifficultyStars() {
+        document.querySelectorAll('.star').forEach((star, index) => {
+          if (index < selectedDifficulty) {
+            star.classList.add('active');
+            star.textContent = '★';
+          } else {
+            star.classList.remove('active');
+            star.textContent = '☆';
+          }
+        });
+      }
+
+      function toggleTag(btn) {
+        btn.classList.toggle('active');
+      }
+
+      function updateSessionTimer() {
+        if (!currentSession) return;
+
+        const now = new Date();
+        const elapsed = Math.floor((now - currentSession.startTime) / 1000); // seconds
+        const hours = Math.floor(elapsed / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
+
+        let timeString;
+        if (hours > 0) {
+          timeString = `${hours}:${minutes
+            .toString()
+            .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+          timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        document.getElementById('sessionDuration').textContent = timeString;
+      }
+
+      async function startSession() {
+        const gym = document.getElementById('gymSelect').value;
+
+        currentSession = {
+          gym: gym,
+          type: selectedSessionType,
+          startTime: new Date(),
+          climbs: [],
+        };
+
+        // Save to Firebase
+        await db
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('sessions')
+          .add({
+            gym: gym,
+            type: selectedSessionType,
+            startTime: firebase.firestore.Timestamp.now(),
+            climbs: [],
+          })
+          .then((docRef) => {
+            currentSession.id = docRef.id;
+          });
+
+        document.getElementById('sessionType').textContent =
+          selectedSessionType === 'boulder'
+            ? 'Boulder Session'
+            : 'Rope Session';
+        document.getElementById('sessionGym').textContent = gym;
+
+        document.getElementById('landingView').classList.add('hidden');
+        document.getElementById('sessionView').classList.remove('hidden');
+        closeModal('sessionSetupModal');
+
+        updateSessionStats();
+
+        // Start timer
+        updateSessionTimer();
+        sessionTimerInterval = setInterval(updateSessionTimer, 1000);
+      }
+
+      async function saveClimb() {
+        if (!selectedOutcome) {
+          alert('Please select an outcome');
+          return;
+        }
+
+        const tags = Array.from(
+          document.querySelectorAll('.tag-btn.active')
+        ).map((btn) => btn.textContent);
+
+        const climb = {
+          grade: document.getElementById('gradeSelect').value,
+          outcome: selectedOutcome,
+          style: selectedStyle,
+          difficulty: selectedDifficulty,
+          tags: tags,
+          notes: document.getElementById('climbNotes').value,
+          timestamp: new Date(),
+        };
+
+        currentSession.climbs.push(climb);
+
+        // Save to Firebase
+        await db
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('sessions')
+          .doc(currentSession.id)
+          .update({
+            climbs: firebase.firestore.FieldValue.arrayUnion(climb),
+          });
+
+        addClimbToList(climb);
+        updateSessionStats();
+        closeModal('logClimbModal');
+      }
+
+      function addClimbToList(climb) {
+        const climbList = document.getElementById('climbList');
+
+        // Remove empty state
+        if (climbList.querySelector('.empty-state')) {
+          climbList.innerHTML = '';
+        }
+
+        const climbItem = document.createElement('div');
+        climbItem.className = 'climb-item';
+
+        const stars =
+          '★'.repeat(climb.difficulty) + '☆'.repeat(5 - climb.difficulty);
+
+        climbItem.innerHTML = `
+                <div class="climb-header">
+                    <div class="climb-grade">${climb.grade}</div>
+                    <div class="climb-difficulty">${stars}</div>
+                </div>
+                <div class="climb-details">
+                    <span class="climb-badge badge-${
+                      climb.outcome
+                    }">${climb.outcome.toUpperCase()}</span>
+                    <span>${climb.style}</span>
+                    ${climb.tags.map((tag) => `<span>${tag}</span>`).join('')}
+                </div>
+                ${
+                  climb.notes
+                    ? `<div class="climb-note">"${climb.notes}"</div>`
+                    : ''
+                }
+            `;
+
+        climbList.insertBefore(climbItem, climbList.firstChild);
+      }
+
+      function updateSessionStats() {
+        const climbs = currentSession.climbs;
+        document.getElementById('sessionClimbs').textContent = climbs.length;
+
+        const sends = climbs.filter(
+          (c) => c.outcome === 'send' || c.outcome === 'flash'
+        ).length;
+        document.getElementById('sessionSends').textContent = sends;
+
+        // Find highest grade sent
+        const sentClimbs = climbs.filter(
+          (c) => c.outcome === 'send' || c.outcome === 'flash'
+        );
+        if (sentClimbs.length > 0) {
+          const grades =
+            currentSession.type === 'boulder' ? boulderGrades : ropeGrades;
+          const highestIndex = Math.max(
+            ...sentClimbs.map((c) => grades.indexOf(c.grade))
+          );
+          document.getElementById('sessionHighGrade').textContent =
+            grades[highestIndex];
+        }
+      }
+
+      async function endSession() {
+        if (confirm('End this session?')) {
+          // Stop timer
+          if (sessionTimerInterval) {
+            clearInterval(sessionTimerInterval);
+            sessionTimerInterval = null;
+          }
+
+          // Calculate and save duration
+          const endTime = new Date();
+          const durationMinutes = Math.floor(
+            (endTime - currentSession.startTime) / 60000
+          );
+
+          await db
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('sessions')
+            .doc(currentSession.id)
+            .update({
+              endTime: firebase.firestore.Timestamp.now(),
+              durationMinutes: durationMinutes,
+            });
+
+          currentSession = null;
+          document.getElementById('sessionView').classList.add('hidden');
+          document.getElementById('landingView').classList.remove('hidden');
+
+          // Clear climb list
+          document.getElementById('climbList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🧗</div>
+                        <p>Log your first climb to get started</p>
+                    </div>
+                `;
+
+          loadStats();
+        }
+      }
+
+      async function loadStats() {
+        if (!currentUser) return;
+
+        const sessionsSnapshot = await db
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('sessions')
+          .get();
+
+        let totalClimbs = 0;
+        let totalSends = 0;
+
+        sessionsSnapshot.forEach((doc) => {
+          const session = doc.data();
+          totalClimbs += session.climbs.length;
+          totalSends += session.climbs.filter(
+            (c) => c.outcome === 'send' || c.outcome === 'flash'
+          ).length;
+        });
+
+        document.getElementById('totalClimbs').textContent = totalClimbs;
+        document.getElementById('totalSessions').textContent =
+          sessionsSnapshot.size;
+
+        const sendRate =
+          totalClimbs > 0 ? Math.round((totalSends / totalClimbs) * 100) : 0;
+        document.getElementById('sendRate').textContent = sendRate + '%';
+
+        if (totalClimbs > 0) {
+          document.getElementById('statsView').classList.remove('hidden');
+        }
+      }
+
+      // Initialize
+      updateDifficultyStars();
+    </script>
+  </body>
+</html>
