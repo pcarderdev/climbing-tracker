@@ -488,6 +488,81 @@
         font-style: italic;
       }
 
+      .session-history-item {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        transition: all 0.2s;
+      }
+
+      .session-history-item:hover {
+        border-color: var(--accent-primary);
+      }
+
+      .session-history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .session-history-date {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+      }
+
+      .session-history-type {
+        font-size: 13px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .session-history-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+      }
+
+      .session-history-stat {
+        text-align: center;
+      }
+
+      .session-history-stat-value {
+        font-size: 18px;
+        font-weight: 700;
+        font-family: 'Overpass Mono', monospace;
+        color: var(--accent-primary);
+      }
+
+      .session-history-stat-label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .delete-session-btn {
+        background: rgba(248, 113, 113, 0.1);
+        border: 1px solid rgba(248, 113, 113, 0.3);
+        color: var(--fail);
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+      }
+
+      .delete-session-btn:hover {
+        background: rgba(248, 113, 113, 0.2);
+        border-color: var(--fail);
+      }
+
       .empty-state {
         text-align: center;
         padding: 40px 20px;
@@ -514,6 +589,15 @@
         border-radius: 12px;
         padding: 16px;
         text-align: center;
+      }
+
+      .stat-card[onclick] {
+        transition: all 0.2s;
+      }
+
+      .stat-card[onclick]:hover {
+        border-color: var(--accent-primary);
+        transform: translateY(-2px);
       }
 
       .stat-value {
@@ -566,7 +650,11 @@
             <div class="stat-value" id="totalClimbs">0</div>
             <div class="stat-label">Total Climbs</div>
           </div>
-          <div class="stat-card">
+          <div
+            class="stat-card"
+            onclick="showSessionHistory()"
+            style="cursor: pointer"
+          >
             <div class="stat-value" id="totalSessions">0</div>
             <div class="stat-label">Sessions</div>
           </div>
@@ -620,6 +708,28 @@
           </div>
         </div>
       </div>
+
+      <!-- Session History view -->
+      <div id="historyView" class="hidden">
+        <div class="card">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 20px;
+            "
+          >
+            <h2 style="font-size: 22px; font-weight: 700">Session History</h2>
+            <button class="btn-secondary btn-small" onclick="closeHistory()">
+              Back
+            </button>
+          </div>
+          <div id="sessionHistoryList" class="climb-list">
+            <!-- Will be populated with sessions -->
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Session Setup Modal -->
@@ -635,9 +745,9 @@
         <div class="form-group">
           <label>Gym</label>
           <select id="gymSelect">
-            <option value="Durham">TRC - Durham</option>
-            <option value="Salvage">TRC - Salvage Yard</option>
-            <option value="Morrisville">TRC - Morrisville</option>
+            <option value="Triangle Rock Club">Triangle Rock Club</option>
+            <option value="Inner Peaks">Inner Peaks</option>
+            <option value="Lifetime Fitness">Lifetime Fitness</option>
             <option value="Other">Other</option>
           </select>
         </div>
@@ -758,20 +868,11 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <script>
-      // ============================================
-      // FIREBASE CONFIG - PASTE YOUR CONFIG HERE
-      // ============================================
-      const firebaseConfig = {
-        apiKey: 'AIzaSyAE4Iwuhu7UvldmAuiluLWYLI8r6U04B8I',
-        authDomain: 'climbing-tracker-d6c2a.firebaseapp.com',
-        projectId: 'climbing-tracker-d6c2a',
-        storageBucket: 'climbing-tracker-d6c2a.firebasestorage.app',
-        messagingSenderId: '287353383248',
-        appId: '1:287353383248:web:a9c5c9ab98e8569f706455',
-      };
+    <!-- Firebase Config -->
+    <script src="firebase-config.js"></script>
 
-      // Initialize Firebase
+    <script>
+      // Initialize Firebase (config loaded from firebase-config.js)
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
       const db = firebase.firestore();
@@ -804,25 +905,27 @@
         'V8',
         'V9',
         'V10',
+        'V11',
+        'V12',
       ];
       const ropeGrades = [
-        '5.5',
         '5.6',
         '5.7',
         '5.8',
-        '5.8+',
-        '5.9-',
         '5.9',
-        '5.9+',
-        '5.10-',
-        '5.10',
-        '5.10+',
-        '5.11-',
-        '5.11',
-        '5.11+',
-        '5.12-',
-        '5.12',
-        '5.12+',
+        '5.10a',
+        '5.10b',
+        '5.10c',
+        '5.10d',
+        '5.11a',
+        '5.11b',
+        '5.11c',
+        '5.11d',
+        '5.12a',
+        '5.12b',
+        '5.12c',
+        '5.12d',
+        '5.13a',
       ];
 
       // Modal functions
@@ -1160,6 +1263,115 @@
 
         if (totalClimbs > 0) {
           document.getElementById('statsView').classList.remove('hidden');
+        }
+      }
+
+      async function showSessionHistory() {
+        const sessionsSnapshot = await db
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('sessions')
+          .orderBy('startTime', 'desc')
+          .get();
+
+        const historyList = document.getElementById('sessionHistoryList');
+        historyList.innerHTML = '';
+
+        if (sessionsSnapshot.empty) {
+          historyList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <p>No sessions yet</p>
+                    </div>
+                `;
+        } else {
+          sessionsSnapshot.forEach((doc) => {
+            const session = doc.data();
+            const sessionId = doc.id;
+            const startDate = session.startTime.toDate();
+            const dateStr = startDate.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            });
+
+            const climbs = session.climbs || [];
+            const sends = climbs.filter(
+              (c) => c.outcome === 'send' || c.outcome === 'flash'
+            ).length;
+
+            // Find highest grade
+            const grades =
+              session.type === 'boulder' ? boulderGrades : ropeGrades;
+            const sentClimbs = climbs.filter(
+              (c) => c.outcome === 'send' || c.outcome === 'flash'
+            );
+            let highGrade = '-';
+            if (sentClimbs.length > 0) {
+              const highestIndex = Math.max(
+                ...sentClimbs.map((c) => grades.indexOf(c.grade))
+              );
+              highGrade = grades[highestIndex];
+            }
+
+            const duration = session.durationMinutes || 0;
+            const durationStr =
+              duration > 60
+                ? `${Math.floor(duration / 60)}h ${duration % 60}m`
+                : `${duration}m`;
+
+            const sessionItem = document.createElement('div');
+            sessionItem.className = 'session-history-item';
+            sessionItem.innerHTML = `
+                        <div class="session-history-header">
+                            <div>
+                                <div class="session-history-date">${dateStr}</div>
+                                <div class="session-history-type">${session.type} • ${session.gym}</div>
+                            </div>
+                            <button class="delete-session-btn" onclick="deleteSession('${sessionId}')">Delete</button>
+                        </div>
+                        <div class="session-history-stats">
+                            <div class="session-history-stat">
+                                <div class="session-history-stat-value">${durationStr}</div>
+                                <div class="session-history-stat-label">Duration</div>
+                            </div>
+                            <div class="session-history-stat">
+                                <div class="session-history-stat-value">${sends}</div>
+                                <div class="session-history-stat-label">Sends</div>
+                            </div>
+                            <div class="session-history-stat">
+                                <div class="session-history-stat-value">${highGrade}</div>
+                                <div class="session-history-stat-label">High Point</div>
+                            </div>
+                        </div>
+                    `;
+            historyList.appendChild(sessionItem);
+          });
+        }
+
+        document.getElementById('landingView').classList.add('hidden');
+        document.getElementById('historyView').classList.remove('hidden');
+      }
+
+      function closeHistory() {
+        document.getElementById('historyView').classList.add('hidden');
+        document.getElementById('landingView').classList.remove('hidden');
+      }
+
+      async function deleteSession(sessionId) {
+        if (confirm('Delete this session? This cannot be undone.')) {
+          await db
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('sessions')
+            .doc(sessionId)
+            .delete();
+
+          // Refresh the history view
+          await showSessionHistory();
+
+          // Update stats
+          await loadStats();
         }
       }
 
