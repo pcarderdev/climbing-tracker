@@ -9,7 +9,7 @@ let currentSession = null;
 let selectedSessionType = 'boulder';
 let selectedOutcome = null;
 let selectedStyle = null;
-let selectedDifficulty = 3;
+let selectedDifficulty = 'on';
 let sessionTimerInterval = null;
 
 // Auth
@@ -64,34 +64,60 @@ function showLogClimb() {
     .map((g) => `<option value="${g}">${g}</option>`)
     .join('');
 
+  // Populate outcome buttons based on session type
+  const outcomeButtons = document.getElementById('outcomeButtons');
+  if (currentSession.type === 'boulder') {
+    outcomeButtons.innerHTML = `
+      <button class="toggle-btn" onclick="selectOutcome('warmup')">Warmup</button>
+      <button class="toggle-btn" onclick="selectOutcome('flash')">Flash</button>
+      <button class="toggle-btn" onclick="selectOutcome('send')">Send</button>
+      <button class="toggle-btn" onclick="selectOutcome('fail')">Fail</button>
+    `;
+  } else {
+    outcomeButtons.innerHTML = `
+      <button class="toggle-btn" onclick="selectOutcome('warmup')">Warmup</button>
+      <button class="toggle-btn" onclick="selectOutcome('flash')">Flash</button>
+      <button class="toggle-btn" onclick="selectOutcome('dirty')">Dirty</button>
+      <button class="toggle-btn" onclick="selectOutcome('fail')">Fail</button>
+    `;
+  }
+
   // Populate style buttons
   const styleButtons = document.getElementById('styleButtons');
   if (currentSession.type === 'boulder') {
     styleButtons.innerHTML = `
-                    <button class="toggle-btn active" onclick="selectStyle('wall')">Wall</button>
-                    <button class="toggle-btn" onclick="selectStyle('board')">Board</button>
-                `;
+      <button class="toggle-btn active" onclick="selectStyle('wall')">Wall</button>
+      <button class="toggle-btn" onclick="selectStyle('board')">Board</button>
+    `;
     selectedStyle = 'wall';
   } else {
     styleButtons.innerHTML = `
-                    <button class="toggle-btn active" onclick="selectStyle('lead')">Lead</button>
-                    <button class="toggle-btn" onclick="selectStyle('toprope')">Top Rope</button>
-                `;
+      <button class="toggle-btn active" onclick="selectStyle('lead')">Lead</button>
+      <button class="toggle-btn" onclick="selectStyle('toprope')">Top Rope</button>
+    `;
     selectedStyle = 'lead';
   }
 
   // Reset form
   selectedOutcome = null;
-  selectedDifficulty = 3;
+  selectedDifficulty = 'on';
   document.querySelectorAll('.toggle-btn').forEach((btn) => {
     if (
       !btn.textContent.includes('Wall') &&
-      !btn.textContent.includes('Lead')
+      !btn.textContent.includes('Lead') &&
+      !btn.textContent.includes('On')
     ) {
       btn.classList.remove('active');
     }
   });
-  updateDifficultyStars();
+  // Set "On" as active by default
+  document
+    .querySelectorAll('#logClimbModal .button-group.three .toggle-btn')
+    .forEach((btn) => {
+      if (btn.textContent === 'On') {
+        btn.classList.add('active');
+      }
+    });
   document.getElementById('climbNotes').value = '';
   document
     .querySelectorAll('.tag-btn')
@@ -132,17 +158,15 @@ function selectStyle(style) {
 
 function setDifficulty(rating) {
   selectedDifficulty = rating;
-  updateDifficultyStars();
-}
-
-function updateDifficultyStars() {
-  document.querySelectorAll('.star').forEach((star, index) => {
-    if (index < selectedDifficulty) {
-      star.classList.add('active');
-      star.textContent = '★';
-    } else {
-      star.classList.remove('active');
-      star.textContent = '☆';
+  // Update button states
+  const difficultyButtons = document.querySelectorAll(
+    '#logClimbModal .button-group.three .toggle-btn'
+  );
+  difficultyButtons.forEach((btn) => {
+    btn.classList.remove('active');
+    const btnText = btn.textContent.trim().toLowerCase();
+    if (btnText === rating.toLowerCase()) {
+      btn.classList.add('active');
     }
   });
 }
@@ -250,38 +274,75 @@ async function saveClimb() {
 }
 
 function addClimbToList(climb) {
-  const climbList = document.getElementById('climbList');
+  refreshClimbList();
+}
 
-  // Remove empty state
-  if (climbList.querySelector('.empty-state')) {
-    climbList.innerHTML = '';
+async function deleteClimb(climbIndex) {
+  if (confirm('Delete this climb?')) {
+    // Remove from local session
+    currentSession.climbs.splice(climbIndex, 1);
+
+    // Update Firebase
+    await db
+      .collection('users')
+      .doc(currentUser.uid)
+      .collection('sessions')
+      .doc(currentSession.id)
+      .update({
+        climbs: currentSession.climbs,
+      });
+
+    // Refresh the climb list
+    refreshClimbList();
+    updateSessionStats();
   }
+}
 
-  const climbItem = document.createElement('div');
-  climbItem.className = 'climb-item';
+function refreshClimbList() {
+  const climbList = document.getElementById('climbList');
+  climbList.innerHTML = '';
 
-  const stars = '★'.repeat(climb.difficulty) + '☆'.repeat(5 - climb.difficulty);
+  if (currentSession.climbs.length === 0) {
+    climbList.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🧗</div>
+        <p>Log your first climb to get started</p>
+      </div>
+    `;
+  } else {
+    // Display climbs in reverse order (newest first)
+    currentSession.climbs
+      .slice()
+      .reverse()
+      .forEach((climb, reverseIndex) => {
+        const actualIndex = currentSession.climbs.length - 1 - reverseIndex;
+        const climbItem = document.createElement('div');
+        climbItem.className = 'climb-item';
 
-  climbItem.innerHTML = `
-                <div class="climb-header">
-                    <div class="climb-grade">${climb.grade}</div>
-                    <div class="climb-difficulty">${stars}</div>
-                </div>
-                <div class="climb-details">
-                    <span class="climb-badge badge-${
-                      climb.outcome
-                    }">${climb.outcome.toUpperCase()}</span>
-                    <span>${climb.style}</span>
-                    ${climb.tags.map((tag) => `<span>${tag}</span>`).join('')}
-                </div>
-                ${
-                  climb.notes
-                    ? `<div class="climb-note">"${climb.notes}"</div>`
-                    : ''
-                }
-            `;
+        const difficultyText =
+          climb.difficulty.toString().charAt(0).toUpperCase() +
+          climb.difficulty.toString().slice(1);
 
-  climbList.insertBefore(climbItem, climbList.firstChild);
+        climbItem.innerHTML = `
+        <div class="climb-header">
+          <div class="climb-grade">${climb.grade}</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="climb-difficulty">${difficultyText}</div>
+            <button class="delete-climb-btn" onclick="deleteClimb(${actualIndex})" title="Delete climb">×</button>
+          </div>
+        </div>
+        <div class="climb-details">
+          <span class="climb-badge badge-${
+            climb.outcome
+          }">${climb.outcome.toUpperCase()}</span>
+          <span>${climb.style}</span>
+          ${climb.tags.map((tag) => `<span>${tag}</span>`).join('')}
+        </div>
+        ${climb.notes ? `<div class="climb-note">"${climb.notes}"</div>` : ''}
+      `;
+        climbList.appendChild(climbItem);
+      });
+  }
 }
 
 function updateSessionStats() {
@@ -289,13 +350,15 @@ function updateSessionStats() {
   document.getElementById('sessionClimbs').textContent = climbs.length;
 
   const sends = climbs.filter(
-    (c) => c.outcome === 'send' || c.outcome === 'flash'
+    (c) =>
+      c.outcome === 'send' || c.outcome === 'flash' || c.outcome === 'dirty'
   ).length;
   document.getElementById('sessionSends').textContent = sends;
 
   // Find highest grade sent
   const sentClimbs = climbs.filter(
-    (c) => c.outcome === 'send' || c.outcome === 'flash'
+    (c) =>
+      c.outcome === 'send' || c.outcome === 'flash' || c.outcome === 'dirty'
   );
   if (sentClimbs.length > 0) {
     const grades =
@@ -338,11 +401,11 @@ async function endSession() {
 
     // Clear climb list
     document.getElementById('climbList').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🧗</div>
-                        <p>Log your first climb to get started</p>
-                    </div>
-                `;
+      <div class="empty-state">
+        <div class="empty-state-icon">🧗</div>
+        <p>Log your first climb to get started</p>
+      </div>
+    `;
 
     loadStats();
   }
@@ -364,7 +427,8 @@ async function loadStats() {
     const session = doc.data();
     totalClimbs += session.climbs.length;
     totalSends += session.climbs.filter(
-      (c) => c.outcome === 'send' || c.outcome === 'flash'
+      (c) =>
+        c.outcome === 'send' || c.outcome === 'flash' || c.outcome === 'dirty'
     ).length;
   });
 
@@ -393,11 +457,11 @@ async function showSessionHistory() {
 
   if (sessionsSnapshot.empty) {
     historyList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📊</div>
-                        <p>No sessions yet</p>
-                    </div>
-                `;
+      <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <p>No sessions yet</p>
+      </div>
+    `;
   } else {
     sessionsSnapshot.forEach((doc) => {
       const session = doc.data();
@@ -411,13 +475,15 @@ async function showSessionHistory() {
 
       const climbs = session.climbs || [];
       const sends = climbs.filter(
-        (c) => c.outcome === 'send' || c.outcome === 'flash'
+        (c) =>
+          c.outcome === 'send' || c.outcome === 'flash' || c.outcome === 'dirty'
       ).length;
 
       // Find highest grade
       const grades = session.type === 'boulder' ? boulderGrades : ropeGrades;
       const sentClimbs = climbs.filter(
-        (c) => c.outcome === 'send' || c.outcome === 'flash'
+        (c) =>
+          c.outcome === 'send' || c.outcome === 'flash' || c.outcome === 'dirty'
       );
       let highGrade = '-';
       if (sentClimbs.length > 0) {
@@ -435,29 +501,33 @@ async function showSessionHistory() {
 
       const sessionItem = document.createElement('div');
       sessionItem.className = 'session-history-item';
+      sessionItem.style.cursor = 'pointer';
       sessionItem.innerHTML = `
-                        <div class="session-history-header">
-                            <div>
-                                <div class="session-history-date">${dateStr}</div>
-                                <div class="session-history-type">${session.type} • ${session.gym}</div>
-                            </div>
-                            <button class="delete-session-btn" onclick="deleteSession('${sessionId}')">Delete</button>
-                        </div>
-                        <div class="session-history-stats">
-                            <div class="session-history-stat">
-                                <div class="session-history-stat-value">${durationStr}</div>
-                                <div class="session-history-stat-label">Duration</div>
-                            </div>
-                            <div class="session-history-stat">
-                                <div class="session-history-stat-value">${sends}</div>
-                                <div class="session-history-stat-label">Sends</div>
-                            </div>
-                            <div class="session-history-stat">
-                                <div class="session-history-stat-value">${highGrade}</div>
-                                <div class="session-history-stat-label">High Point</div>
-                            </div>
-                        </div>
-                    `;
+        <div class="session-history-header">
+          <div>
+            <div class="session-history-date">${dateStr}</div>
+            <div class="session-history-type">${session.type} • ${session.gym}</div>
+          </div>
+          <button class="delete-session-btn" onclick="event.stopPropagation(); deleteSession('${sessionId}')">Delete</button>
+        </div>
+        <div class="session-history-stats">
+          <div class="session-history-stat">
+            <div class="session-history-stat-value">${durationStr}</div>
+            <div class="session-history-stat-label">Duration</div>
+          </div>
+          <div class="session-history-stat">
+            <div class="session-history-stat-value">${sends}</div>
+            <div class="session-history-stat-label">Sends</div>
+          </div>
+          <div class="session-history-stat">
+            <div class="session-history-stat-value">${highGrade}</div>
+            <div class="session-history-stat-label">High Point</div>
+          </div>
+        </div>
+      `;
+      sessionItem.addEventListener('click', () =>
+        showSessionDetail(sessionId, session, dateStr)
+      );
       historyList.appendChild(sessionItem);
     });
   }
@@ -469,6 +539,114 @@ async function showSessionHistory() {
 function closeHistory() {
   document.getElementById('historyView').classList.add('hidden');
   document.getElementById('landingView').classList.remove('hidden');
+}
+
+function showSessionDetail(sessionId, session, dateStr) {
+  // Set header info
+  document.getElementById('detailSessionTitle').textContent = dateStr;
+  const typeText = session.type === 'boulder' ? 'Boulder' : 'Rope';
+  document.getElementById(
+    'detailSessionInfo'
+  ).textContent = `${typeText} • ${session.gym}`;
+
+  // Populate climb list
+  const detailClimbList = document.getElementById('sessionDetailClimbList');
+  detailClimbList.innerHTML = '';
+
+  const climbs = session.climbs || [];
+
+  if (climbs.length === 0) {
+    detailClimbList.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🧗</div>
+        <p>No climbs logged in this session</p>
+      </div>
+    `;
+  } else {
+    climbs.forEach((climb, index) => {
+      const climbItem = document.createElement('div');
+      climbItem.className = 'climb-item';
+
+      const difficultyText =
+        climb.difficulty.toString().charAt(0).toUpperCase() +
+        climb.difficulty.toString().slice(1);
+
+      climbItem.innerHTML = `
+        <div class="climb-header">
+          <div class="climb-grade">${climb.grade}</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="climb-difficulty">${difficultyText}</div>
+            <button class="delete-climb-btn" onclick="deleteClimbFromHistory('${sessionId}', ${index})" title="Delete climb">×</button>
+          </div>
+        </div>
+        <div class="climb-details">
+          <span class="climb-badge badge-${
+            climb.outcome
+          }">${climb.outcome.toUpperCase()}</span>
+          <span>${climb.style}</span>
+          ${
+            climb.tags && climb.tags.length > 0
+              ? climb.tags.map((tag) => `<span>${tag}</span>`).join('')
+              : ''
+          }
+        </div>
+        ${climb.notes ? `<div class="climb-note">"${climb.notes}"</div>` : ''}
+      `;
+      detailClimbList.appendChild(climbItem);
+    });
+  }
+
+  // Switch views
+  document.getElementById('historyView').classList.add('hidden');
+  document.getElementById('sessionDetailView').classList.remove('hidden');
+}
+
+function closeSessionDetail() {
+  document.getElementById('sessionDetailView').classList.add('hidden');
+  document.getElementById('historyView').classList.remove('hidden');
+}
+
+async function deleteClimbFromHistory(sessionId, climbIndex) {
+  if (confirm('Delete this climb?')) {
+    // Get the session from Firebase
+    const sessionDoc = await db
+      .collection('users')
+      .doc(currentUser.uid)
+      .collection('sessions')
+      .doc(sessionId)
+      .get();
+
+    const session = sessionDoc.data();
+    const climbs = session.climbs || [];
+
+    // Remove the climb
+    climbs.splice(climbIndex, 1);
+
+    // Update Firebase
+    await db
+      .collection('users')
+      .doc(currentUser.uid)
+      .collection('sessions')
+      .doc(sessionId)
+      .update({
+        climbs: climbs,
+      });
+
+    // Refresh the detail view
+    const startDate = session.startTime.toDate();
+    const dateStr = startDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    // Update the session object and refresh view
+    session.climbs = climbs;
+    showSessionDetail(sessionId, session, dateStr);
+
+    // Update stats
+    await loadStats();
+  }
 }
 
 async function deleteSession(sessionId) {
@@ -487,6 +665,3 @@ async function deleteSession(sessionId) {
     await loadStats();
   }
 }
-
-// Initialize
-updateDifficultyStars();

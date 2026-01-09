@@ -10,7 +10,7 @@
     --text-secondary: #8b93a8;
     --border: #252d40;
     --success: #4ade80;
-    --flash: #e5a83d;
+    --flash: #4ade80;
     --warmup: #60a5fa;
     --fail: #f87171;
 }
@@ -318,29 +318,6 @@ textarea {
     box-shadow: 0 4px 12px rgba(217, 120, 69, 0.2);
 }
 
-/* Star rating */
-.star-rating {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-}
-
-.star {
-    font-size: 32px;
-    cursor: pointer;
-    color: var(--border);
-    transition: all 0.2s;
-}
-
-.star.active {
-    color: var(--accent-secondary);
-    text-shadow: 0 0 8px rgba(199, 115, 64, 0.3);
-}
-
-.star:hover {
-    transform: scale(1.1);
-}
-
 /* Tags */
 .tag-group {
     display: flex;
@@ -452,13 +429,18 @@ textarea {
 }
 
 .badge-send {
-    background: rgba(74, 222, 128, 0.15);
+    background: rgba(251, 191, 36, 0.15);
     color: var(--success);
 }
 
 .badge-flash {
-    background: rgba(251, 191, 36, 0.15);
+    background: rgba(74, 222, 128, 0.15);
     color: var(--flash);
+}
+
+.badge-dirty {
+    background: rgba(229, 168, 61, 0.15);
+    color: #d4a04c;
 }
 
 .badge-warmup {
@@ -549,6 +531,24 @@ textarea {
 }
 
 .delete-session-btn:hover {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: var(--fail);
+}
+
+.delete-climb-btn {
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--fail);
+    padding: 4px 8px;
+    font-size: 16px;
+    line-height: 1;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delete-climb-btn:hover {
     background: rgba(248, 113, 113, 0.2);
     border-color: var(--fail);
 }

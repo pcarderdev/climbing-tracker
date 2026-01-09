@@ -108,6 +108,44 @@
       </div>
     </div>
 
+    <!-- Session Detail view -->
+    <div id="sessionDetailView" class="hidden">
+      <div class="card">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+          "
+        >
+          <div>
+            <h2
+              style="font-size: 22px; font-weight: 700"
+              id="detailSessionTitle"
+            ></h2>
+            <div
+              style="
+                font-size: 14px;
+                color: var(--text-secondary);
+                margin-top: 4px;
+              "
+              id="detailSessionInfo"
+            ></div>
+          </div>
+          <button
+            class="btn-secondary btn-small"
+            onclick="closeSessionDetail()"
+          >
+            Back
+          </button>
+        </div>
+        <div id="sessionDetailClimbList" class="climb-list">
+          <!-- Will be populated with climbs -->
+        </div>
+      </div>
+    </div>
+
     <!-- Session Setup Modal -->
     <div id="sessionSetupModal" class="modal">
       <div class="modal-content">
@@ -174,19 +212,8 @@
 
         <div class="form-group">
           <label>Outcome</label>
-          <div class="button-group four">
-            <button class="toggle-btn" onclick="selectOutcome('warmup')">
-              Warmup
-            </button>
-            <button class="toggle-btn" onclick="selectOutcome('flash')">
-              Flash
-            </button>
-            <button class="toggle-btn" onclick="selectOutcome('send')">
-              Send
-            </button>
-            <button class="toggle-btn" onclick="selectOutcome('fail')">
-              Fail
-            </button>
+          <div class="button-group four" id="outcomeButtons">
+            <!-- Will be populated dynamically -->
           </div>
         </div>
 
@@ -199,12 +226,16 @@
 
         <div class="form-group">
           <label>Difficulty</label>
-          <div class="star-rating" id="difficultyRating">
-            <span class="star" onclick="setDifficulty(1)">☆</span>
-            <span class="star" onclick="setDifficulty(2)">☆</span>
-            <span class="star" onclick="setDifficulty(3)">☆</span>
-            <span class="star" onclick="setDifficulty(4)">☆</span>
-            <span class="star" onclick="setDifficulty(5)">☆</span>
+          <div class="button-group three">
+            <button class="toggle-btn" onclick="setDifficulty('soft')">
+              Soft
+            </button>
+            <button class="toggle-btn active" onclick="setDifficulty('on')">
+              On
+            </button>
+            <button class="toggle-btn" onclick="setDifficulty('hard')">
+              Hard
+            </button>
           </div>
         </div>
 
