@@ -13,9 +13,19 @@ let selectedDifficulty = 'on';
 let sessionTimerInterval = null;
 
 // Auth
-auth.signInAnonymously().then((userCredential) => {
+auth.signInAnonymously().then(async (userCredential) => {
   currentUser = userCredential.user;
-  loadStats();
+
+  // Try to restore active session first
+  const sessionRestored = await restoreActiveSession();
+
+  // Load stats regardless
+  await loadStats();
+
+  // If session was restored, show a subtle indicator
+  if (sessionRestored) {
+    console.log('Active session restored');
+  }
 });
 
 // Grade options
@@ -215,6 +225,7 @@ async function startSession() {
       gym: gym,
       type: selectedSessionType,
       startTime: firebase.firestore.Timestamp.now(),
+      endTime: null,
       climbs: [],
     })
     .then((docRef) => {
@@ -234,6 +245,54 @@ async function startSession() {
   // Start timer
   updateSessionTimer();
   sessionTimerInterval = setInterval(updateSessionTimer, 1000);
+}
+
+async function restoreActiveSession() {
+  if (!currentUser) return;
+
+  // Look for sessions without an endTime (active sessions)
+  const activeSessions = await db
+    .collection('users')
+    .doc(currentUser.uid)
+    .collection('sessions')
+    .where('endTime', '==', null)
+    .orderBy('startTime', 'desc')
+    .limit(1)
+    .get();
+
+  if (!activeSessions.empty) {
+    const sessionDoc = activeSessions.docs[0];
+    const sessionData = sessionDoc.data();
+
+    // Restore the session
+    currentSession = {
+      id: sessionDoc.id,
+      gym: sessionData.gym,
+      type: sessionData.type,
+      startTime: sessionData.startTime.toDate(),
+      climbs: sessionData.climbs || [],
+    };
+
+    // Update UI
+    document.getElementById('sessionType').textContent =
+      currentSession.type === 'boulder' ? 'Boulder Session' : 'Rope Session';
+    document.getElementById('sessionGym').textContent = currentSession.gym;
+
+    document.getElementById('landingView').classList.add('hidden');
+    document.getElementById('sessionView').classList.remove('hidden');
+
+    // Restore climb list
+    refreshClimbList();
+    updateSessionStats();
+
+    // Restart timer
+    updateSessionTimer();
+    sessionTimerInterval = setInterval(updateSessionTimer, 1000);
+
+    return true;
+  }
+
+  return false;
 }
 
 async function saveClimb() {
