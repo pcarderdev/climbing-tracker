@@ -22,7 +22,11 @@
         </div>
 
         <div class="stats hidden" id="statsView">
-          <div class="stat-card">
+          <div
+            class="stat-card"
+            onclick="showAnalytics()"
+            style="cursor: pointer"
+          >
             <div class="stat-value" id="totalClimbs">0</div>
             <div class="stat-label">Total Climbs</div>
           </div>
@@ -143,6 +147,77 @@
         <div id="sessionDetailClimbList" class="climb-list">
           <!-- Will be populated with climbs -->
         </div>
+      </div>
+    </div>
+
+    <!-- Analytics view -->
+    <div id="analyticsView" class="hidden">
+      <div class="card">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+          "
+        >
+          <h2 style="font-size: 22px; font-weight: 700">Climb Analytics</h2>
+          <button class="btn-secondary btn-small" onclick="closeAnalytics()">
+            Back
+          </button>
+        </div>
+
+        <!-- Type selector -->
+        <div class="form-group">
+          <label>Type</label>
+          <div class="button-group">
+            <button
+              class="toggle-btn active"
+              id="analyticsTypeBoulder"
+              onclick="selectAnalyticsType('boulder')"
+            >
+              Boulder
+            </button>
+            <button
+              class="toggle-btn"
+              id="analyticsTypeRope"
+              onclick="selectAnalyticsType('rope')"
+            >
+              Rope
+            </button>
+          </div>
+        </div>
+
+        <!-- Session range selector -->
+        <div class="form-group">
+          <label>Latest Sessions</label>
+          <div class="button-group three">
+            <button
+              class="toggle-btn active"
+              id="analyticsRange3"
+              onclick="selectAnalyticsRange(3)"
+            >
+              3
+            </button>
+            <button
+              class="toggle-btn"
+              id="analyticsRange5"
+              onclick="selectAnalyticsRange(5)"
+            >
+              5
+            </button>
+            <button
+              class="toggle-btn"
+              id="analyticsRange10"
+              onclick="selectAnalyticsRange(10)"
+            >
+              10
+            </button>
+          </div>
+        </div>
+
+        <!-- Chart container -->
+        <div id="analyticsChart"></div>
       </div>
     </div>
 

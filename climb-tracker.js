@@ -724,3 +724,211 @@ async function deleteSession(sessionId) {
     await loadStats();
   }
 }
+
+// Analytics
+let analyticsType = 'boulder';
+let analyticsRange = 3;
+
+async function showAnalytics() {
+  document.getElementById('landingView').classList.add('hidden');
+  document.getElementById('analyticsView').classList.remove('hidden');
+
+  await loadAnalyticsData();
+}
+
+function closeAnalytics() {
+  document.getElementById('analyticsView').classList.add('hidden');
+  document.getElementById('landingView').classList.remove('hidden');
+}
+
+function selectAnalyticsType(type) {
+  analyticsType = type;
+
+  // Update button states
+  document
+    .getElementById('analyticsTypeBoulder')
+    .classList.toggle('active', type === 'boulder');
+  document
+    .getElementById('analyticsTypeRope')
+    .classList.toggle('active', type === 'rope');
+
+  loadAnalyticsData();
+}
+
+function selectAnalyticsRange(range) {
+  analyticsRange = range;
+
+  // Update button states
+  document
+    .getElementById('analyticsRange3')
+    .classList.toggle('active', range === 3);
+  document
+    .getElementById('analyticsRange5')
+    .classList.toggle('active', range === 5);
+  document
+    .getElementById('analyticsRange10')
+    .classList.toggle('active', range === 10);
+
+  loadAnalyticsData();
+}
+
+async function loadAnalyticsData() {
+  const sessionsSnapshot = await db
+    .collection('users')
+    .doc(currentUser.uid)
+    .collection('sessions')
+    .where('type', '==', analyticsType)
+    .orderBy('startTime', 'desc')
+    .limit(analyticsRange)
+    .get();
+
+  if (sessionsSnapshot.empty) {
+    document.getElementById('analyticsChart').innerHTML = `
+      <div class="chart-empty">
+        <div class="empty-state-icon">📊</div>
+        <p>No ${analyticsType} sessions yet</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Aggregate climb data by grade
+  const gradeData = {};
+  const grades = analyticsType === 'boulder' ? boulderGrades : ropeGrades;
+
+  sessionsSnapshot.forEach((doc) => {
+    const session = doc.data();
+    const climbs = session.climbs || [];
+
+    climbs.forEach((climb) => {
+      if (!gradeData[climb.grade]) {
+        gradeData[climb.grade] = {
+          warmup: 0,
+          flash: 0,
+          send: 0,
+          dirty: 0,
+          fail: 0,
+        };
+      }
+      gradeData[climb.grade][climb.outcome]++;
+    });
+  });
+
+  // Find max count for scaling
+  let maxCount = 0;
+  Object.values(gradeData).forEach((data) => {
+    const total = data.warmup + data.flash + data.send + data.dirty + data.fail;
+    if (total > maxCount) maxCount = total;
+  });
+
+  // Ensure maxCount is at least 1 for scaling
+  if (maxCount === 0) maxCount = 1;
+
+  // Build chart - display ALL grades
+  let chartHTML = '<div class="chart-bar-group">';
+
+  grades.forEach((grade) => {
+    const data = gradeData[grade] || {
+      warmup: 0,
+      flash: 0,
+      send: 0,
+      dirty: 0,
+      fail: 0,
+    };
+    const total = data.warmup + data.flash + data.send + data.dirty + data.fail;
+
+    const maxHeight = 200; // pixels
+    const barHeight = total > 0 ? (total / maxCount) * maxHeight : 4; // Minimum 4px for empty bars
+
+    chartHTML += `
+      <div class="chart-bar-container">
+        <div class="chart-bar" style="height: ${barHeight}px; ${
+      total === 0 ? 'opacity: 0.3;' : ''
+    }">
+          ${
+            total > 0
+              ? `
+            ${
+              data.warmup
+                ? `<div class="chart-segment chart-segment-warmup" style="height: ${
+                    (data.warmup / total) * 100
+                  }%"></div>`
+                : ''
+            }
+            ${
+              data.fail
+                ? `<div class="chart-segment chart-segment-fail" style="height: ${
+                    (data.fail / total) * 100
+                  }%"></div>`
+                : ''
+            }
+            ${
+              data.dirty
+                ? `<div class="chart-segment chart-segment-dirty" style="height: ${
+                    (data.dirty / total) * 100
+                  }%"></div>`
+                : ''
+            }
+            ${
+              data.send
+                ? `<div class="chart-segment chart-segment-send" style="height: ${
+                    (data.send / total) * 100
+                  }%"></div>`
+                : ''
+            }
+            ${
+              data.flash
+                ? `<div class="chart-segment chart-segment-flash" style="height: ${
+                    (data.flash / total) * 100
+                  }%"></div>`
+                : ''
+            }
+          `
+              : ''
+          }
+        </div>
+        <div class="chart-label">${grade}</div>
+        ${total > 0 ? `<div class="chart-count">${total}</div>` : ''}
+      </div>
+    `;
+  });
+
+  chartHTML += '</div>';
+
+  // Add legend
+  chartHTML += `
+    <div class="chart-legend">
+      <div class="legend-item">
+        <div class="legend-color chart-segment-warmup"></div>
+        <span>Warmup</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color chart-segment-fail"></div>
+        <span>Fail</span>
+      </div>
+      ${
+        analyticsType === 'rope'
+          ? `
+        <div class="legend-item">
+          <div class="legend-color chart-segment-dirty"></div>
+          <span>Dirty</span>
+        </div>
+      `
+          : ''
+      }
+      <div class="legend-item">
+        <div class="legend-color chart-segment-send"></div>
+        <span>Send</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color chart-segment-flash"></div>
+        <span>Flash</span>
+      </div>
+
+
+
+    </div>
+  `;
+
+  document.getElementById('analyticsChart').innerHTML = chartHTML;
+}

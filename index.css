@@ -9,8 +9,8 @@
     --text-primary: #e8edf4;
     --text-secondary: #8b93a8;
     --border: #252d40;
-    --success: #4ade80;
     --flash: #4ade80;
+    --success: #ffd700;
     --warmup: #60a5fa;
     --fail: #f87171;
 }
@@ -617,4 +617,104 @@ textarea {
 
 .modal-actions button {
     flex: 1;
+}
+
+#analyticsChart {
+    margin-top: 20px;
+}
+
+.chart-bar-group {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.chart-bar-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.chart-bar {
+    width: 100%;
+    display: flex;
+    flex-direction: column-reverse;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+    overflow: hidden;
+    min-height: 4px;
+}
+
+.chart-segment {
+    width: 100%;
+    transition: all 0.3s;
+}
+
+.chart-segment:hover {
+    opacity: 0.8;
+}
+
+.chart-segment-send {
+    background: var(--success);
+}
+
+.chart-segment-flash {
+    background: var(--flash);
+}
+
+.chart-segment-dirty {
+    background: #d4a04c;
+}
+
+.chart-segment-warmup {
+    background: var(--warmup);
+}
+
+.chart-segment-fail {
+    background: var(--fail);
+}
+
+.chart-label {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Overpass Mono', monospace;
+    color: var(--text-secondary);
+}
+
+.chart-count {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.chart-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
 }
